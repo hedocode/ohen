@@ -17,7 +17,7 @@ typedef struct{
 	int targetId;	
 
 	bool vulnerable;
-	status state;
+	Status state;
 } Player;
 
 typedef Player Player;

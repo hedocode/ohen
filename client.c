@@ -2,10 +2,36 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include "display.h"
 #include "player.h"
 #include "socket.h"
 
+//Gitea
+//Jitea
+
+void menuConnexion(int color, int spacingLeft, int size, char * nickname, char * hostname){
+	clear();
+	Coords c1;
+	Coords c2;
+	emptyBlankLine(4);
+	simpleLine(1,color, spacingLeft, size);
+	messageLine(0, "CONNEXION :", color, spacingLeft, size);
+	emptyColoredShadowedLine(1, color, spacingLeft, size);
+	c1.x = inputLine("Nickname :", color, 7, 30, spacingLeft, size);
+	c1.y = 4+1+1+1+3;
+	emptyColoredShadowedLine(1, color, spacingLeft, size);
+	c2.x = inputLine("Hostname :", color, 7, 30, spacingLeft, size);
+	c2.y = c1.y+2+2;
+	emptyColoredShadowedLine(1, color, spacingLeft, size);
+	lastLine(3, color, spacingLeft, size);
+	putCursor(c1.x, c1.y);
+	scanf("%s", nickname);
+	putCursor(c2.x, c2.y);
+	scanf("%s", hostname);
+}
+
 int main(){
+	int color = 1;
 	char buffer [512];
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock == -1){
@@ -16,10 +42,9 @@ int main(){
 	SOCKADDR_IN address = { 0 };
 	char hostname [32];
 	char nickname [32];
-	printf("Nickname : ");
-	scanf("%s", nickname);
-	printf("Hostname : ");
-	scanf("%s", hostname);
+	
+
+	menuConnexion(color, 4, 64, nickname, hostname);
 
 	struct hostent * hostinfo = gethostbyname(hostname);
 

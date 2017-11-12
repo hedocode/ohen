@@ -7,24 +7,56 @@
 #include "player.h"
 #include "socket.h"
 
+void playTurn(Player * playersGameInfo, int maxClients){
+	for(int i = 0; i < maxClients-1; i++){
+		Player * current = playersGameInfo[i]; 
+		switch(playersGameInfo[i]->state){
+			case GENERATE:
+				generate(current);
+			case ATTACK:
+				Player * target = playersGameInfo[current->targetId];
+				attack(current, target);
+				break;
+			case DEFENSE:
+				defend(current);
+			default :
+				fprint(stderr,"UNDEFINED STATE");
+				exit(0);
+		}
+	}
+}
+
+void initPlayersGameInfo(Player * playersGameInfo, int maxClients){
+	playersGameInfo = malloc(sizeof(Player)*maxClients);
+	for(int i = 0; i < maxClients-1; i++){
+		playersGameInfo[i] = createPlayer();
+	}
+}
+
+void askServerInfo(char * name, char * password, int * maxClients){
+	printf("Server name : ");
+	scanf("%s",name);
+	printf("Password : ");
+	system("stty -echo");
+	scanf("%s",password);
+	system("stty echo");
+	printf("\nPlayers : ");
+	scanf("%d",maxClients);
+}
+
 int main(){
 	char name[50];
 	char password[50];
 	int maxClients;
-	printf("Server name : ");
-	scanf("%s",name);
-	printf("\nPassword :");
-	system("stty -echo");
-	scanf("%s",password);
-	system("stty echo");
-	printf("\nPlayers :");
-	scanf("%d",&maxClients);
+	
+	askServerInfo(name, password, &maxClients);
 
 	SOCKADDR_IN socketAddress = { 0 };
 
 	SOCKADDR_IN clientAddress [8];
 	int clientSockets [8];	
 	char clientName [8][30];
+	Player * playersGameInfo;
 
 	int adressLenght, sock;
 	int clientCount = 0;
@@ -68,9 +100,9 @@ int main(){
 		char * mess = " joined the server ";
 		mess = strcat(buffer,  mess);	
 		sprintf(mess,"%s !\n %d / %d players connected\n \n", mess, clientCount, maxClients);
-		for(int i = 0; i < clientCount-1; i++){
-                    	if(send(clientSockets[i], mess, strlen(mess),0) < 0){
-				perror("SEND ERROR TO ALL: ");
+		for(int i = 0; i < clientcount-1; i++){
+                    	if(send(clientsockets[i], mess, strlen(mess),0) < 0){
+				perror("send error to all: ");
 				exit(errno);
 			}
                	}
@@ -81,7 +113,24 @@ int main(){
 			perror("SEND ERROR TO NEWCOMER :");
 			exit(errno);
 		}
-	}	
+	}
+	for(int i = 0; i < maxClients-1; i++){
+		if(send(clientsockets[i], "READY", strlen("READY"),0) < 0){
+			perror("SEND \"READY\" TO EVERYONE: ");
+			exit(errno);
+		}
+	}
+	initPlayersGameInfo(playersGameInfo, maxClient);
+	while(1){
+		wait(1);
+		playTurn(playersGameInfo, maxClient);
+		for(int i = 0; i < clientCount-1; i++){
+			if(send(clientSockets[i], playersGameInfo, sizeof(Player),0) < 0){
+				perror("SEND GAMEINFO ERROR : ");
+				exit(errno);
+			}
+		}
+	}
 	for(int i = 0; i < clientCount-1; i++){
 		close(clientSockets[i]);
 	}

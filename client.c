@@ -42,14 +42,16 @@ int main(){
 		perror("SEND ERROR : ");
 		exit(errno);
 	}
-	int n = 0;
-
-	if((n=recv(sock, buffer, sizeof buffer -1, 0)) < 0){
-
-		perror("RECV WELCOME MESSAGE ");
-		exit(errno);
+	while(strcmp(buffer, "READY") != 0){
+		int n = 0;
+		if((n=recv(sock, buffer, sizeof buffer -1, 0)) < 0){
+			perror("RECV WELCOME MESSAGE ");
+			exit(errno);
+		}
+		buffer[n] = '\0';
+		if(n != 0)
+			printf("<Message from server>\n %s \n", buffer);
 	}
-	buffer[n] = '\0';
-	printf("Message from server : %s , %d \n", buffer, n);
+	
 	return 0;
 }

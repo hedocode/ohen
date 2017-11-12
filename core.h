@@ -6,6 +6,12 @@ typedef struct{
 }tdata;
 
 typedef enum{
+	GENERATE,
+	ATTACK,
+	DEFENSE
+}status;
+
+typedef enum{
 	false,
 	true
 } bool;

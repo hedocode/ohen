@@ -1,9 +1,12 @@
+#ifndef _pthread
+#define _pthread
 #include <pthread.h>
+#endif
 
 typedef struct{
 	int x;
 	int y;
-}coords;
+}Coords;
 
 typedef struct{
 	void * data;
@@ -14,23 +17,9 @@ typedef enum{
 	GENERATE,
 	ATTACK,
 	DEFENSE
-}status;
+}Status;
 
 typedef enum{
 	false,
 	true
 } bool;
-
-typedef enum{
-	BLUE,
-	GREEN,
-	DARK,
-	YELLOW,
-	RED,
-	PINK
-}color;
-
-typedef color Color;
-typedef coords Coords;
-typedef tdata Tdata;
-typedef status Status;

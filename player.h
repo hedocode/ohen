@@ -1,6 +1,13 @@
-#include "core.h"
+#ifndef _player
+#define _player
 
+	#ifndef _core
+	#define _core
+	#include "core.h"
+	#endif
 typedef struct{
+	int id;
+	
 	int ohen;
 	int max_ohen;
 
@@ -20,9 +27,8 @@ typedef struct{
 	Status state;
 } Player;
 
-typedef Player Player;
 
-Player createPlayer();
+Player * createPlayer();
 void generate(Player * player);
 void attack(Player * attacker, Player * defender);
 void defend(Player * defender);
@@ -30,3 +36,9 @@ void upgradeAttackDamage(Player * p);
 void upgradeRegenOhen(Player * p);
 void upgradeDefense(Player * p);
 void upgradeHealthRegen(Player * p);
+char * serializePlayer(Player p);
+char * serializePlayers(Player ** p, int playerCount);
+char * serializeIntArray(int * intarr);
+Player intArray2Player(int * arr);
+int * player2IntArray(Player p);
+#endif

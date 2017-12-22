@@ -1,13 +1,13 @@
 all: server client progBar
 
 client: client.c display.c
-	gcc client.c display.c color.c -o client -pthread
+	gcc client.c display.c color.c -o client -pthread -Wall
 	
 server:
-	gcc server.c player.c -o server -pthread
+	gcc server.c player.c -o server -pthread -Wall
 	
 progBar: 
-	gcc progBar.c display.c color.c -o progBar
+	gcc progBar.c display.c color.c -o progBar -Wall
 
 clean:
 	rm -rf server client progBar

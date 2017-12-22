@@ -1,7 +1,4 @@
-#ifndef _stdio
-#define _stdio
 #include <stdio.h>
-#endif
 
 //parametres
 /*	

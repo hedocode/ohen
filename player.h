@@ -1,13 +1,12 @@
 #ifndef _player
 #define _player
 
-	#ifndef _core
-	#define _core
-	#include "core.h"
-	#endif
+#include "core.h"
+	
 typedef struct{
 	int id;
 	
+	char * nickname;
 	int ohen;
 	int max_ohen;
 
@@ -28,7 +27,7 @@ typedef struct{
 } Player;
 
 
-Player * createPlayer();
+Player createPlayer();
 void generate(Player * player);
 void attack(Player * attacker, Player * defender);
 void defend(Player * defender);
@@ -37,7 +36,7 @@ void upgradeRegenOhen(Player * p);
 void upgradeDefense(Player * p);
 void upgradeHealthRegen(Player * p);
 char * serializePlayer(Player p);
-char * serializePlayers(Player ** p, int playerCount);
+char * serializePlayers(Player * p, int playerCount);
 char * serializeIntArray(int * intarr);
 Player intArray2Player(int * arr);
 int * player2IntArray(Player p);

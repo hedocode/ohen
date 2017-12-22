@@ -1,7 +1,6 @@
-#ifndef _pthread
-#define _pthread
+#ifndef _core
+#define _core
 #include <pthread.h>
-#endif
 
 typedef struct{
 	int x;
@@ -23,3 +22,12 @@ typedef enum{
 	false,
 	true
 } bool;
+
+typedef enum{
+	MAIN,
+	DISPLAY_GAME_INFO,
+	DISPLAY_ACTION_CHOICE,
+	DISPLAY_UPGRADES
+} Menu;
+
+#endif

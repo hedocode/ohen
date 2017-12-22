@@ -1,3 +1,5 @@
+#ifndef _color
+#define _color
 typedef enum{
 	BLUE,
 	GREEN,
@@ -5,6 +7,7 @@ typedef enum{
 	YELLOW,
 	RED,
 	PINK,
+	WHITE,
 	IDK
 }color;
 
@@ -24,3 +27,5 @@ void red();
 void shadow();
 void pink();
 void idk();
+void white();
+#endif

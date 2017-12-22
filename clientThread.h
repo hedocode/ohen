@@ -1,10 +1,11 @@
-#ifndef _player
-#define _player
+#ifndef _clientThread
+#define _clientThread
 #include "player.h"
-#endif
+
 
 typedef struct {
-	Player * playersGameInfo;
+	Player ** playersGameInfo;
 	int sock;
 	int clientCount;
-} ListenThreadArgs;
+} ListenServerThreadArgs;
+#endif

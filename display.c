@@ -1,20 +1,18 @@
-#ifndef _stdio
-#define _stdio
 #include <stdio.h>
-#endif
 #include <string.h>
 #include <stdlib.h>
 #include "display.h"
+#include "core.h"
 
 // Put the console cursor at the x,y position.
-void putCursor(int x, int y){
+void putCursor(int x, int y){ //printf(27 91 65)
 	char cmd [30] = "";
 	sprintf(cmd, "tput cup %d %d", y, x);
 	system(cmd);
 }
 
 // Display a progress bar with the given parameters.
-void progBar(int spacingLeft, char * message, int barLenght, int size, int part, int total, int colorFont, int colorBar){
+void progBar(int spacingLeft, char * message, int size, int part, int total, int colorFont, int colorBar){
 	
 	int pourcVie, rest;
 	
@@ -26,6 +24,9 @@ void progBar(int spacingLeft, char * message, int barLenght, int size, int part,
 	sprintf(message, "%s (%d/%d) : ", message, part, total);
 	printf("%s", message);
 	printBlank(2);
+	
+	
+	int barLenght = size-strlen(message)-spacingLeft-4;
 	
 	pourcVie = (part / (float)total)*barLenght;
 	initcolor(colorBar);
@@ -40,8 +41,7 @@ void progBar(int spacingLeft, char * message, int barLenght, int size, int part,
 	printBlank(size-2-barLenght-4-strlen(message)-spacingLeft);
 
 	printBlank(2);
-	setColor(0);
-	printf("\n");
+	endLineShadow();
 }
 
 
@@ -58,12 +58,11 @@ void emptyBlankLine(int x){
 		printf("\n");
 }
 
-// Print a shadow at the end of the line and go to the next.
-void endLineShadow(){
-	shadow();
-	printf(" ");
-	setColor(0);
-	printf("\n");
+// Begin a menu
+void beginMenu(int color, int spacingLeft, int size){
+	clear();
+	emptyBlankLine(4);
+	simpleLine(1,color, spacingLeft, size);
 }
 
 // Print n lines with the chosen color and no shadow
@@ -97,7 +96,7 @@ int messageLine(int a , char * chaine, int color, int spacingLeft, int size){
 	if(a > 0){
 		printBlank(spacingLeft);
 		printf("%d) %s",a,chaine);
-		printBlank(size - strLen - spacingLeft - 2 - strlen(a + ""));
+		printBlank(size - strLen - spacingLeft - 3);
 	}
 	else{
 		printBlank(spacingLeft);
@@ -129,23 +128,59 @@ int inputLine(char * chaine, int color, int blankColor, int blankSize, int spaci
 	initcolor(color);
 	printBlank(size - blankSize - 8- strLen);
 	
-	shadow();
-	printBlank(1);
-	setColor(0);
-	printf("\n");
+	endLineShadow();
 	emptyColoredShadowedLine(1, color, spacingLeft, size);
 	normal();
-	return spacingLeft + 4 + strLen + 4;
+	return spacingLeft + 4 + strLen + 5;
 }
 
 // Print the last lines of a menu with a shadow under.
-void lastLine(int n, int color, int spacingLeft, int size){
+void endMenu(int n, int color, int spacingLeft, int size){
 	for (int i = 0; i < n; i++){
 		emptyColoredShadowedLine(1, color, spacingLeft, size);
 	}
 	printBlank(spacingLeft + 1);
+	endLineShadow();
+}
+
+// Display the end of the menu with a given notification message
+void endMenuNotif(int color, char * message, int spacingLeft, int size){
+	int len = strlen(message);
+	emptyColoredShadowedLine(1, color, spacingLeft, size);
+	
+	//Print first notifLine with menu shadow
+	printBlank(spacingLeft+3);
 	shadow();
-	printBlank(size);
+	printBlank(size-spacingLeft-len-1);
+	red();
+	printBlank(len+2);
+	endLineShadow();
+	
+	// Print second line with message
+	printBlank(size-len+2);
+	red();
+	printf(" %s ",message);
+	endLineShadow();
+	
+	//Print red notif line with shadow
+	printBlank(size-len+2);
+	red();
+	printBlank(len+2);
+	endLineShadow();
+	
+	// Print Shadow under the notification bar.
+	printBlank(size-len+1);
+	shadow();
+	printBlank(size-len-1);
+	shadow();
+	printBlank(len-1);
+	endLineShadow();
+}
+
+// Print a shadow and go to the next line.
+void endLineShadow(){
+	shadow();
+	printBlank(1);
 	setColor(0);
 	printf("\n");
 }
@@ -175,6 +210,12 @@ void initcolor(Color color)
 		case IDK :
 			idk();
 			break;
+		case WHITE:
+			white();
+			break;
+		default:
+			white();
+			break;
 	}
 }
 
@@ -200,6 +241,23 @@ void initBlankColor(Color color){
 			break;
 		default :
 			setColor(47);
+			break;
+	}
+}
+
+char * statusToString(Status s){
+	switch(s){
+		case GENERATE:
+			return "GENERATE";
+			break;
+		case ATTACK:
+			return "ATTACK";
+			break;
+		case DEFENSE:
+			return "DEFENSE";
+			break;
+		default:
+			return "UNKNOWN STATUS";
 			break;
 	}
 }

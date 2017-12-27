@@ -1,0 +1,35 @@
+\documentclass{book}
+
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[francais]{babel}
+ 
+\title{Ohen}
+\author{BLANCHARD \bsc{Dorian}}
+\date{27 décembre 2017}
+
+\begin{document}
+
+\maketitle
+
+\part{Spécificités}
+\chapter{Description}
+\section{Un programme "serveur / client".}
+Ce programme possède un makefile permettant de compiler un client et un serveur.
+Le serveur spécifie son nom et le nombre de clients qu'il va accepter et une fois que le nombre indiqué de clients est connecté, il va lancer la partie, recevoir les messages des clients, et leurs répondre toutes les secondes, après les avoir fait jouer. Seul le serveur peut modifier les informations de la partie, le client ne possède qu'une "télécommande" lui permettant de demander au serveur d'exécuter une action.
+Le client va quand à lui, proposer une personnalisation de l'interface utilisateur, permettant de changer la taille et la couleur de cette dernière, ainsi qu'un tutoriel, expliquant la base du jeu. Et enfin, la connexion à un serveur, sous un certain pseudonyme.
+\section{Ohen, jeu de stratégie en réseau.}
+Dans une partie d'Ohen, tout les joueurs possèdent de la vie et du Ohen. 
+Quand la vie d'un joueur tombe à zéro, il meurt et ne peut plus jouer.
+Quand un joueur atteint le maximum d'Ohen, ou est le dernier à être en vie, il gagne.
+Chaque joueur choisit une action, que le serveur va lui faire faire toute les secondes.
+Il peut "générer" du Ohen, "attaquer" un joueur, ou se "défendre".
+Quand un joueur en attaque un autre, il dépense du Ohen proportionnellement à son attaque.
+Quand un joueur se défends, il arrête de générer du Ohen et génère de la vie à la place, tout en réduisant les dégâts qu'il se prends.
+Il peut également à tout moment, acheter une amélioration contre de l'Ohen, augmentant ses statistiques telles que la régénération d'Ohen, l'attaque, ou la défense.
+Ces améliorations augmentent de prix à chaque fois afin d'éviter qu'un joueur d'augmente trop vite une statistique, forçant les joueurs à équilibrer leurs améliorations afin de rester dans la course et permettant une stratégie de rotation des attaques entre les joueurs, visant à ralentir la progression du joueur en tête.
+\section{Environnement de développement}
+Ce jeu à été codé en C uniquement, en utilisant les bibliothèques de bases, avec l'aide de Notepad++ et du bash Windows contenu dans son sous-noyau Linux. Il sera jouable sur Linux.
+
+
+\end{document}

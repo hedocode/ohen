@@ -2,7 +2,6 @@
 #define _serverThread
 #include "player.h"
 
-
 typedef struct {
 	Player ** playersGameInfo;
 	int * clientSockets;

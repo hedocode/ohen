@@ -1,6 +1,7 @@
 #include <stdio.h>
+#include "color.h"
 
-//parametres
+// Parametres
 /*	
 	si x=3 texte, si x=4 fond
 	x0=Noir
@@ -11,6 +12,9 @@
 	x5=Magenta
 	x6=Cyan
 	x7=Blanc
+	Examples : 
+		-34 changera la couleur du texte en Bleu.
+		-47 changera la couleur de fonc en Blanc.
 */
 
 // Clear the console.
@@ -87,7 +91,69 @@ void idk(){
 	setColor(37);
 }
 
+// Write white Text over a pink background
 void pink(){
 	setColor(45);
 	setColor(37);
+}
+
+
+// Activate the chosen color.
+void initcolor(Color color)
+{
+	switch(color){
+		case BLUE : 
+			blue();
+			break;
+		case GREEN : 
+			green();
+			break;
+		case DARK : 
+			dark();
+			break;
+		case YELLOW : 
+			yellow();
+			break;
+		case RED :
+			red();
+			break;
+		case PINK :
+			pink();
+			break;
+		case IDK :
+			idk();
+			break;
+		case WHITE:
+			white();
+			break;
+		default:
+			white();
+			break;
+	}
+}
+
+void initBlankColor(Color color){
+	switch(color){
+		case BLUE : 
+			setColor(47);
+			break;
+		case GREEN : 
+			setColor(47);
+			break;
+		case DARK : 
+			setColor(47);
+			break;
+		case YELLOW : 
+			setColor(47);
+			break;
+		case RED :
+			setColor(47);
+			break;
+		case PINK :
+			setColor(47);
+			break;
+		default :
+			setColor(47);
+			break;
+	}
 }

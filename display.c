@@ -185,66 +185,6 @@ void endLineShadow(){
 	printf("\n");
 }
 
-// Activate the chosen color.
-void initcolor(Color color)
-{
-	switch(color){
-		case BLUE : 
-			blue();
-			break;
-		case GREEN : 
-			green();
-			break;
-		case DARK : 
-			dark();
-			break;
-		case YELLOW : 
-			yellow();
-			break;
-		case RED :
-			red();
-			break;
-		case PINK :
-			pink();
-			break;
-		case IDK :
-			idk();
-			break;
-		case WHITE:
-			white();
-			break;
-		default:
-			white();
-			break;
-	}
-}
-
-void initBlankColor(Color color){
-	switch(color){
-		case BLUE : 
-			setColor(47);
-			break;
-		case GREEN : 
-			setColor(47);
-			break;
-		case DARK : 
-			setColor(47);
-			break;
-		case YELLOW : 
-			setColor(47);
-			break;
-		case RED :
-			setColor(47);
-			break;
-		case PINK :
-			setColor(47);
-			break;
-		default :
-			setColor(47);
-			break;
-	}
-}
-
 char * statusToString(Status s){
 	switch(s){
 		case GENERATE:

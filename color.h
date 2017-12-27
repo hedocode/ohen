@@ -28,4 +28,6 @@ void shadow();
 void pink();
 void idk();
 void white();
+void initcolor(Color color);
+void initBlankColor(Color color);
 #endif

@@ -23,11 +23,8 @@ typedef enum{
 	true
 } bool;
 
-typedef enum{
-	MAIN,
-	DISPLAY_GAME_INFO,
-	DISPLAY_ACTION_CHOICE,
-	DISPLAY_UPGRADES
-} Menu;
+int string2unsignedint(char * stringNumber);
+int getNextNumber(char * str);
+char * getNextString(char * str);
 
 #endif

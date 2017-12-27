@@ -12,39 +12,30 @@
 // Makes the player at the chosen index generating ohen.
 void setPlayerGenerate(Player ** players, int playerIndex){
 	players[0][playerIndex].state = GENERATE;
-	fprintf(stderr,"Making player %d generating.", playerIndex);
 }
 
 // Makes the player at the chosen index attacking a player at an other chosen index.
-void setPlayerAttack(Player ** players, int playerIndex, int playerCount, int targetId){
-	if(targetId >= 0 && targetId < playerCount){
-		players[0][playerIndex].state = ATTACK;
-		players[0][playerIndex].targetId = targetId;
+void setPlayerAttack(Player ** players, int playerIndex, int playerCount, char * target){
+	if(strlen(target) == 1){	
+		int targetId = string2unsignedint(target);
+		if(targetId >= 0 && targetId < playerCount){
+			players[0][playerIndex].state = ATTACK;
+			players[0][playerIndex].targetId = targetId;
+		}
 	}
-	fprintf(stderr,"Making player %d attack %d.", playerIndex, targetId);
+	else{
+		for(int i = 0; i < playerCount; i++){
+			if(strcmp(players[0][i].nickname, target) == 0){
+				players[0][playerIndex].state = ATTACK;
+				players[0][playerIndex].targetId = i;
+			}
+		}
+	}
 }
 
 // Makes the player at the chosen index defending himself.
 void setPlayerDefend(Player ** players, int playerIndex){
 	players[0][playerIndex].state = DEFENSE;
-}
-
-int string2unsignedint(char * stringNumber) {
-	int number = 0;
-	int i = 0;
-
-	int stringLength = strlen(stringNumber);
-
-	while (i < stringLength) {
-		int digit = stringNumber[i++] - '0';
-		if (digit < 0 || digit > 9) {
-		  printf("Invalid character '%c' on the position '%d'\n", stringNumber[i - 1],(i - 1));
-		  return -1;
-		}
-		number *= 10;
-		number += digit;
-	}
-	return number;
 }
 
 // Play the turn
@@ -72,28 +63,6 @@ void playTurn(Player * playersGameInfo, int maxClients){
 	}
 }
 
-char * getNextWord(char * str){
-	char * buffer = malloc(sizeof(char[512]));
-	int len = strlen(str);
-	if(strlen(str) == 0){
-		return "";
-	}
-	while(str[0] != 0 && str[0] != 32){
-		fprintf(stderr,"%d ", str[0]);
-		sprintf(buffer,"%s%c",buffer,str[0]);
-		for(int i = 0; i<len;i++){
-			str[i] = str[i+1];
-		}
-		str[len] = '\0';
-		len--;
-	}
-	for(int i = 0; i<len;i++){
-		str[i] = str[i+1];
-	}
-	str[len] = '\0';
-	return buffer;
-}
-
 // Player listen thread code
 void * listenPlayer(void * args){
 	char buffer [512];
@@ -105,36 +74,42 @@ void * listenPlayer(void * args){
 		exit(3);
 	}
 	while(arg->playersGameInfo[0][arg->playerIndex].health > 0){
-		fprintf(stderr,"Player %d's health : %d\n", arg->playerIndex, arg->playersGameInfo[0][arg->playerIndex].health);
 		if((n = recv(arg->sock, buffer, sizeof buffer - 1, 0)) < 0){
 				perror("RECV ERROR");
 				exit(errno);
 		}
 		buffer[n] = '\0';
-		word = getNextWord(buffer);
+		word = getNextString(buffer);
 		fprintf(stderr,"%s",word);
 		if(strcmp(word,"generate") == 0){
 			setPlayerGenerate(arg->playersGameInfo, arg->playerIndex);
 		}
 		else if(strcmp(word,"attack") == 0){
-			setPlayerAttack(arg->playersGameInfo, arg->playerIndex, arg->playerCount, string2unsignedint(getNextWord(buffer)));
+			setPlayerAttack(arg->playersGameInfo, arg->playerIndex, arg->playerCount, getNextString(buffer));
 		}
 		else if(strcmp(word,"defend") == 0){
 			setPlayerDefend(arg->playersGameInfo, arg->playerIndex);
 		}
-		else if(strcmp(word,"inc_ohen_regen") == 0){
-			upgradeRegenOhen(arg->playersGameInfo[arg->playerIndex]);
+		else if(strcmp(word, "inc_ohen_regen") == 0){
+			upgradeRegenOhen(&arg->playersGameInfo[0][arg->playerIndex]);
+		}
+		else if(strcmp(word, "inc_attack") == 0){
+			upgradeAttackDamage(&arg->playersGameInfo[0][arg->playerIndex]);
+		}
+		else if(strcmp(word, "inc_defence") == 0){
+			upgradeDefense(&arg->playersGameInfo[0][arg->playerIndex]);
 		}
 		else if(strcmp(word,"disconnect") == 0){
 			arg->clientSockets[arg->playerIndex] = -1;
 			close(arg->sock);
-			return;
+			return NULL;
 		}
 	}
 	if(send(arg->sock, "YOU DIED !", strlen("YOU DIED"),0) < 0){
 			perror("YOU DIED MESSAGE : ");
 			exit(errno);
 	}
+	return NULL;
 }
 
 // Initialize the PlayersGameInfo array.
@@ -157,6 +132,7 @@ void askServerInfo(char * name, char * password, int * maxClients){
 	scanf("%d",maxClients);
 }
 
+// Server main code.
 int main(){
 	pthread_t * listenClient;
 	char name[50];
@@ -192,6 +168,7 @@ int main(){
 	}
 	adressLenght = sizeof(clientAddress);
 	printf("\n");
+	
 	// LOOP Waiting for all the clients to connect.
 	while(clientCount != maxClients)
 	{
@@ -244,6 +221,8 @@ int main(){
 	}
 	
 	sleep(1);
+	
+	//Sending client count to all the clients
 	for(int i = 0; i < maxClients; i++){
 		char cc = clientCount + '0';
 		if(send(clientSockets[i], &cc, sizeof(char), 0) < 0){
@@ -271,20 +250,31 @@ int main(){
 	}
 	
 	bool end = 0;
+	int aliveCount = 0;
+	int lastAliveIndex;
 	
 	//Game loop
 	while(!end){
-		//fprintf(stderr,"Start Play Turn\n");
 		playTurn(playersGameInfo, maxClients);
+		aliveCount = 0;
+		//Win Verification
 		for(int i = 0; i<clientCount; i++){
 			if(playersGameInfo[i].ohen == playersGameInfo[i].max_ohen){
-				printf("%s won !\n",clientName[i]);
-				end = 1;
+				printf("%s won by suprematy !\n",clientName[i]);
+				end = true;
 			}
+			if(playersGameInfo[i].health != 0){
+				aliveCount ++;
+				lastAliveIndex = i;
+			}
+		}		
+		if(aliveCount == 1){
+			printf("%s won by K.O !\n", clientName[lastAliveIndex]);
+			end = true;
 		}
-		//fprintf(stderr,"End Play Turn\n");
 		char * gameInfo = serializePlayers(playersGameInfo, clientCount);
 		fprintf(stderr,"%s\n",gameInfo);
+		
 		//Send serialized infos to the players
 		for(int i = 0; i < clientCount; i++){
 			if(clientSockets[i] != -1){				

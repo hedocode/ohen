@@ -12,88 +12,48 @@
 
 int sock;
 
-//Send a message to the server to make this client generating ohen.
-void askServerToGenerate(){
-	if(send(sock, "generate", strlen("generate"), 0) < 0){
+//Send the char array str to ther server throught the socket given as global parameter.
+void sendMessageToServer(char * str){
+	if(send(sock, str, strlen(str), 0) < 0){
 		perror("SEND ERROR : ");
 		exit(errno);
 	}
 }
+
+//Send a message to the server to make this client generating ohen.
+void askServerToGenerate(){
+	sendMessageToServer("generate");
+}
 	
 // Send a message to the server to make this client defend himself.
 void askServerToDefend(){
-	if(send(sock, "defend", strlen("defend"), 0) < 0){
-		perror("SEND ERROR : ");
-		exit(errno);
-	}
+	sendMessageToServer("defend");
 }
 
 // Send a message to the server to make this client attack an other.
 void askServerToAttack(int targetId){
 	char cmd[64];
 	sprintf(cmd,"%s %d","attack",targetId);
-	cmd[32] = '\0';
-	if(send(sock, cmd, strlen(cmd), 0) < 0){
-		perror("SEND ERROR : ");
-		exit(errno);
-	}
+	sendMessageToServer(cmd);
 }
 
+// Send a message to the server to make this client disconnect.
 void askServerToDisconnect(){
-	if(send(sock, "disconnect", strlen("disconnect"), 0) < 0){
-		perror("SEND ERROR : ");
-		exit(errno);
-	}
+	sendMessageToServer("disconnect");
 }
 
+// Send a message to the server to make this client upgrade his ohen regen.
 void askServerToUpgradeOhenRegen(){
-	if(send(sock, "inc_ohen_regen", strlen("inc_ohen_regen"), 0) < 0){
-		perror("SEND ERROR : ");
-		exit(errno);
-	}
+	sendMessageToServer("inc_ohen_regen");
 }
 
-// Convert a char array into an unsigned int.
-int string2unsignedint(char * stringNumber) {
-	int number = 0;
-	int i = 0;
-
-	int stringLength = strlen(stringNumber);
-
-	while (i < stringLength) {
-		int digit = stringNumber[i++] - '0';
-		if (digit < 0 || digit > 9) {
-		  printf("Invalid character '%c' on the position '%d'\n", stringNumber[i - 1],(i - 1));
-		  return -1;
-		}
-		number *= 10;
-		number += digit;
-	}
-	return number;
+// Send a message to the server to make this client attack an other.
+void askServerToUpgradeAttack(){
+	sendMessageToServer("inc_attack");
 }
 
-// Parsing a char array and getting the next number from it.
-int getNextNumber(char * str){
-	return string2unsignedint(getNextString(str));
-}
-
-// Parsing a char array and getting the next number from it.
-char* getNextString(char * str){
-	char* buffer = malloc(sizeof(char)*8);
-	int len = strlen(str);
-	while(str[0]!= '/'){
-		sprintf(buffer,"%s%c",buffer,str[0]);
-		for(int i = 0; i<len;i++){
-			str[i] = str[i+1];
-		}
-		str[len] = '\0';
-		len--;
-	}
-	for(int i = 0; i<len;i++){
-		str[i] = str[i+1];
-	}
-	str[len] = '\0';
-	return buffer;
+void askServerToUpgradeDefense(){
+	sendMessageToServer("inc_defence");
 }
 
 // Parsing a char array and getting the first Player data from it
@@ -177,7 +137,7 @@ void * listenFromServer(void * args){
 }
 
 // Display the connexion menu.
-void menuConnexion(int color, int spacingLeft, int size, char * nickname, char * hostname){
+int menuConnexion(int color, int spacingLeft, int size, char * nickname, char * hostname, char * notifMessage){
 	Coords c1;
 	Coords c2;
 	beginMenu(color, spacingLeft, size);
@@ -197,6 +157,7 @@ void menuConnexion(int color, int spacingLeft, int size, char * nickname, char *
 	putCursor(c2.x, c2.y);
 	scanf("%s", hostname);
 	setColor(0);
+	return MAIN;
 }
 
 // Display the infos on Players 
@@ -211,7 +172,7 @@ int displayGameInfos(int color, int spacingLeft, int size, Player ** gameInfo, i
 			sprintf(message,"%d) %s's Health", i, gameInfo[0][i].nickname);
 			emptyColoredShadowedLine(1, color, spacingLeft, size);
 			progBar(spacingLeft, message, size, gameInfo[0][i].health, gameInfo[0][i].max_health, color, GREEN);
-			sprintf(message,"%d) %s's state : %s", i, gameInfo[0][i].nickname, statusToString(gameInfo[0][i].state));
+			sprintf(message,"%d) %s's state : %s | GEN : %d | ATK : %d | DEF : %d", i, gameInfo[0][i].nickname, statusToString(gameInfo[0][i].state), gameInfo[0][i].regen_ohen, gameInfo[0][i].attack_damage, gameInfo[0][i].defense);
 			messageLine(-1, message, color, spacingLeft, size);
 		}
 		endMenuNotif(color, "Type anything to update or exit", spacingLeft, size);
@@ -260,6 +221,56 @@ int displayActionChoice(int color, char * notifMessage, int spacingLeft, int siz
 	}
 }
 
+int displayIntroMenu(int color, int spacingLeft, int size, char * notifMessage){
+	char message[256] = "";
+	int a = 1;
+	beginMenu(color, spacingLeft, size);
+	a = messageLine(a, "Connect to a server", color, spacingLeft, size);
+	a = messageLine(a, "Customize", color, spacingLeft, size);
+	a = messageLine(a, "Tutorial", color, spacingLeft, size);
+	
+	strlen(notifMessage) == 0 ? 
+		endMenu(2, color, spacingLeft, size):
+		endMenuNotif(color, notifMessage, spacingLeft, size);
+	
+	scanf("%s", message);
+	if(strcmp(message,"1") == 0 || strcmp(message,"connect") == 0){
+		notifMessage = "";
+		return CONNEXION;
+	}
+	else if(strcmp(message,"2") == 0 || strcmp(message,"custom") == 0){
+		notifMessage = "";
+		return CUSTOMIZATION;
+	}
+	else if(strcmp(message,"3") == 0 || strcmp(message,"upgrade") == 0){
+		notifMessage = "";
+		return TUTORIAL;
+	}
+	else if(strcmp(message,"exit") == 0){
+		notifMessage = "";
+		askServerToDisconnect();
+		close(sock);
+		exit(0);
+	}
+	else{
+		char notifMessage[256];
+		sprintf(notifMessage,"%s isn't a correct cmd.", message);
+		return INTRO;
+	}
+}
+
+int tutorial(int color, int spacingLeft, int size, char * notifMessage){
+	char message[256] = "";
+	beginMenu(color, spacingLeft, size);
+	
+	strlen(notifMessage) == 0 ? 
+		endMenu(2, color, spacingLeft, size):
+		endMenuNotif(color, notifMessage, spacingLeft, size);
+	
+	scanf("%s", message);
+	return INTRO;
+}
+
 int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 	char message[256] = "";
 	int a = 1;
@@ -267,6 +278,8 @@ int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 	a = messageLine(a, "See Player stats", color, spacingLeft, size);
 	a = messageLine(a, "Choose Action", color, spacingLeft, size);
 	a = messageLine(a, "Upgrades", color, spacingLeft, size);
+	a = messageLine(a, "Custom Menu", color, spacingLeft, size);
+
 	strlen(notifMessage) == 0 ? 
 		endMenu(2, color, spacingLeft, size):
 		endMenuNotif(color, notifMessage, spacingLeft, size);
@@ -284,6 +297,10 @@ int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 		notifMessage = "";
 		return DISPLAY_UPGRADES;
 	}
+	else if(strcmp(message,"4") == 0 || strcmp(message,"custom") == 0){
+		notifMessage = "";
+		return CUSTOMIZATION;
+	}
 	else if(strcmp(message,"exit") == 0){
 		notifMessage = "";
 		askServerToDisconnect();
@@ -291,7 +308,6 @@ int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 		exit(0);
 	}
 	else{
-		char notifMessage[256];
 		sprintf(notifMessage,"%s isn't a correct cmd.", message);
 		return MAIN;
 	}
@@ -313,12 +329,69 @@ int displayUpgradesMenu(int color, int spacingLeft, int size, char * notifMessag
 		notifMessage = "";
 		return MAIN;
 	}
-	else if(1){
+	else if(strcmp(message,"2") == 0 || strcmp(message,"attack") == 0){
+		askServerToUpgradeAttack();
+		notifMessage = "";
 		return MAIN;
+	}
+	else if(strcmp(message,"3") == 0 || strcmp(message,"defence") == 0){
+		askServerToUpgradeDefense();
+		notifMessage = "";
+		return MAIN;
+	}
+	else if(strcmp(message,"exit") == 0 || strcmp(message,"return") == 0){
+		notifMessage = "";
+		return MAIN;
+	}
+	else{
+		sprintf(notifMessage, "Unknown command : %s", message);
+		return DISPLAY_UPGRADES;
 	}
 }
 
-int persoMenu(int * color, int spacingLeft, int * size, char * notifMessage){
+int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage){
+	char message[256] = "";
+	int a = 1;
+	beginMenu(*color, spacingLeft, *size);
+	a = messageLine(a, "Change Color", *color, spacingLeft, *size);
+	a = messageLine(a, "Change Window Width", *color, spacingLeft, *size);
+	strlen(notifMessage) == 0 ? 
+		endMenu(2, *color, spacingLeft, *size):
+		endMenuNotif(*color, notifMessage, spacingLeft, *size);
+		scanf("%s", message);
+	char * word = getNextString(message);
+	fprintf(stderr, "word : %s", word);
+	if(strcmp(word,"color") == 0 || strcmp(word,"1") == 0){
+		word = getNextString(message);
+		fprintf(stderr, "word : %s", word);
+		int arg = string2unsignedint(word);
+		if(arg != -1){
+			*color = arg;
+			notifMessage = "";
+			return MAIN;
+		}
+		else{
+			sprintf(notifMessage, "Second arg isn't a number : %s", word);
+			return MAIN;
+		}
+	}
+	else if(strcmp(word,"size") == 0 || strcmp(word,"2") == 0){
+		word = getNextString(message);
+		fprintf(stderr, "word : %s", word);
+		int arg = string2unsignedint(word);
+		if(arg != -1){
+			*size = arg;
+			notifMessage = "";
+			return MAIN;
+		}
+		else{
+			sprintf(notifMessage, "Second arg isn't a number : %s", word);
+			return MAIN;
+		}
+	}
+	else{
+		return MAIN;
+	}
 	return MAIN;
 }
 
@@ -328,7 +401,9 @@ int main(){
 	int spacingLeft = 4;
 	int size = 80;
 	char buffer [512];
-	char clientMessage[256];
+	char notifMessage [256] = "";
+	int nextMenuId = INTRO;
+	
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock == -1){
 		perror("Invalid socket");
@@ -341,9 +416,28 @@ int main(){
 	
 	Player * playersGameInfo;
 	int clientCount = 0;
-
+	bool start = false;
+	
 	// Print the connexion menu.
-	menuConnexion(color, spacingLeft, size, nickname, hostname);
+	while(!start){
+		switch(nextMenuId){
+			case INTRO:
+				nextMenuId = displayIntroMenu(color, spacingLeft, size, notifMessage);
+				break;
+			case CUSTOMIZATION:
+				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage);
+				break;
+			case CONNEXION:
+				nextMenuId = menuConnexion(color, spacingLeft, size, nickname, hostname, notifMessage);
+				break;
+			case TUTORIAL:
+				nextMenuId = tutorial(color, spacingLeft, size, notifMessage);
+				break;
+			default:
+				start = true;
+				break;
+		}
+	}
 
 	struct hostent * hostinfo = gethostbyname(hostname);
 
@@ -362,10 +456,7 @@ int main(){
 		exit(errno);
 	}
 	printf("Connexion réussie !\n");
-	if(send(sock, nickname, strlen(nickname), 0) < 0){
-		perror("SEND ERROR : ");
-		exit(errno);
-	}
+	sendMessageToServer(nickname);
 	
 	// Attente du lancement de la partie.
 	while(strcmp(buffer, "READY") != 0){
@@ -403,8 +494,7 @@ int main(){
 		perror("pthread_create");
 		return -1;
     }
-	int nextMenuId = 0;
-	char notifMessage [256] = "";
+	
 	while(1){
 		switch(nextMenuId){
 			case MAIN:
@@ -418,6 +508,15 @@ int main(){
 				break;
 			case DISPLAY_UPGRADES:
 				nextMenuId = displayUpgradesMenu(color, spacingLeft, size, notifMessage);
+				break;
+			case CUSTOMIZATION:
+				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage);
+				break;
+			case TUTORIAL:
+				nextMenuId = tutorial(color, spacingLeft, size, notifMessage);
+				break;
+			case INTRO:
+				nextMenuId = displayIntroMenu(color, spacingLeft, size, notifMessage);
 				break;
 			default:
 				nextMenuId = displayMainMenu(color, spacingLeft, size, notifMessage);

@@ -23,6 +23,8 @@ typedef struct{
 	int targetId;	
 
 	bool vulnerable;
+	//int consecutiveTurns; //In development game mechanic.
+	
 	Status state;
 } Player;
 

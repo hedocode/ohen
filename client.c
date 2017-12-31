@@ -59,6 +59,7 @@ void askServerToUpgradeAttack(){
 	sendMessageToServer("inc_attack");
 }
 
+// Send a message to the server to make this client defending.
 void askServerToUpgradeDefense(){
 	sendMessageToServer("inc_defence");
 }
@@ -214,6 +215,7 @@ int displayGameInfos(int color, int spacingLeft, int size, Player ** gameInfo, i
 	return MAIN;
 }
 	
+// Display the Menu where you can choose actions to do.
 int displayActionChoice(int color, char * notifMessage, int spacingLeft, int size){
 	char message[256];
 	int a = 1;
@@ -254,6 +256,7 @@ int displayActionChoice(int color, char * notifMessage, int spacingLeft, int siz
 	}
 }
 
+// Display the Intro Menu that allows you to learn how to play and customize your client.
 int displayIntroMenu(int color, int spacingLeft, int size, char * notifMessage){
 	char message[256] = "";
 	int a = 1;
@@ -295,7 +298,13 @@ int displayIntroMenu(int color, int spacingLeft, int size, char * notifMessage){
 int tutorial(int color, int spacingLeft, int size, char * notifMessage){
 	char message[256] = "";
 	beginMenu(color, spacingLeft, size);
-	
+	int a = -1;
+	messageLine(a, "Each player have ohen and life.", color, spacingLeft, size);
+	messageLine(a, "If someone fill his ohen bar, we win.", color, spacingLeft, size);
+	messageLine(a, "If someone life falls to zero, he dies.", color, spacingLeft, size);
+	messageLine(a, "The last person alive win.", color, spacingLeft, size);
+	messageLine(a, "You can choose between generating, attacking, and defending.", color, spacingLeft, size);
+	messageLine(a, "You can also buy some upgrades.", color, spacingLeft, size);
 	strlen(notifMessage) == 0 ? 
 		endMenu(2, color, spacingLeft, size):
 		endMenuNotif(color, notifMessage, spacingLeft, size);
@@ -346,13 +355,19 @@ int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 	}
 }
 
-int displayUpgradesMenu(int color, int spacingLeft, int size, char * notifMessage){
+int displayUpgradesMenu(int color, int spacingLeft, int size, char * notifMessage, Player player){
 	char message[256] = "";
-	int a = 1;
+	int a = -1;
 	beginMenu(color, spacingLeft, size);
-	a = messageLine(a, "Increase Ohen Regen", color, spacingLeft, size);
-	a = messageLine(a, "Increase Attack", color, spacingLeft, size);
-	a = messageLine(a, "Increase Defence", color, spacingLeft, size);
+	sprintf(message, "You have %d ohen.", player.ohen);
+	messageLine(a, message, color, spacingLeft, size);
+	a = 1;
+	sprintf(message, "Increase Ohen Regen - %d ohen", player.regen_ohen*10);
+	a = messageLine(a, message, color, spacingLeft, size);
+	sprintf(message, "Increase Attack - %d ohen", player.attack_damage*9);
+	a = messageLine(a, message, color, spacingLeft, size);
+	sprintf(message, "Increase Defence - %d ohen", player.defense*8);
+	a = messageLine(a, message, color, spacingLeft, size);
 	strlen(notifMessage) == 0 ? 
 		endMenu(2, color, spacingLeft, size):
 		endMenuNotif(color, notifMessage, spacingLeft, size);
@@ -565,7 +580,7 @@ int main(){
 		perror("pthread_create");
 		return -1;
     }
-	
+	Player me;
 	while(!dead){
 		switch(nextMenuId){
 			case MAIN:
@@ -578,7 +593,12 @@ int main(){
 				nextMenuId = displayActionChoice(color, notifMessage, spacingLeft, size);
 				break;
 			case DISPLAY_UPGRADES:
-				nextMenuId = displayUpgradesMenu(color, spacingLeft, size, notifMessage);
+				for(int i = 0; i < clientCount; i++){
+					if(strcmp(playersGameInfo[i].nickname, nickname) == 0){
+						me = playersGameInfo[i];
+					}
+				}
+				nextMenuId = displayUpgradesMenu(color, spacingLeft, size, notifMessage, me);
 				break;
 			case CUSTOMIZATION:
 				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage, nextMenuId);

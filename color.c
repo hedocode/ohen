@@ -49,10 +49,10 @@ void green(){
 	setColor(37);
 }
 
-// Write white Text over a yellow background
+// Write black Text over a yellow background
 void yellow(){
 	setColor(43);
-	setColor(37);
+	setColor(30);
 }
 
 // Write white Text over a cyan background

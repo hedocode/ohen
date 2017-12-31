@@ -9,6 +9,24 @@
 #include "socket.h"
 #include "serverThread.h"
 
+//Send a message throught the socket sock.
+void sendMessage(int sock, char * message){
+	if(sock != -1){
+		if(send(sock, message, strlen(message),0) < 0){
+			perror("Send Message Error : ");
+			printf("Message was : \"%s\"", message);
+			exit(errno);
+		}
+	}
+}
+
+// Send a message to all the clients.
+void sendMessageToClients(int * clientSockets, int clientCount, char * message){
+	for(int i = 0; i < clientCount; i++){
+		sendMessage(clientSockets[i], message);
+	}
+}
+
 // Makes the player at the chosen index generating ohen.
 void setPlayerGenerate(Player ** players, int playerIndex){
 	players[0][playerIndex].state = GENERATE;
@@ -39,7 +57,7 @@ void setPlayerDefend(Player ** players, int playerIndex){
 }
 
 // Play the turn
-void playTurn(Player * playersGameInfo, int maxClients){
+void playTurn(int * clientSockets, Player * playersGameInfo, int maxClients){
 	for(int i = 0; i < maxClients; i++){
 		fprintf(stderr,"Playing player %d turn\n",i);
 		fprintf(stderr,"Player %d's state : %d\n",i,playersGameInfo[i].state);
@@ -51,6 +69,8 @@ void playTurn(Player * playersGameInfo, int maxClients){
 			case ATTACK:
 				fprintf(stderr, "ATTACKING\n");
 				attack(&playersGameInfo[i], &playersGameInfo[playersGameInfo[i].targetId]);
+				if(playersGameInfo[playersGameInfo[i].targetId].health <= 0)
+					sendMessage(clientSockets[playersGameInfo[i].targetId], "KO");
 				break;
 			case DEFENSE:
 				fprintf(stderr, "DEFENDING\n");
@@ -66,6 +86,7 @@ void playTurn(Player * playersGameInfo, int maxClients){
 // Player listen thread code
 void * listenPlayer(void * args){
 	char buffer [512];
+	char message [256];
 	char * word;
 	int n = 0;
 	ListenClientThreadArgs * arg = (ListenClientThreadArgs *) args;
@@ -73,7 +94,7 @@ void * listenPlayer(void * args){
 		perror("Thread argument is not a pointer on a ListenThreadArgs struct"); 
 		exit(3);
 	}
-	while(arg->playersGameInfo[0][arg->playerIndex].health > 0){
+	while(arg->playersGameInfo[0][arg->playerIndex].health > 0 && *arg->end == false){
 		if((n = recv(arg->sock, buffer, sizeof buffer - 1, 0)) < 0){
 				perror("RECV ERROR");
 				exit(errno);
@@ -82,34 +103,50 @@ void * listenPlayer(void * args){
 		word = getNextString(buffer);
 		fprintf(stderr,"%s",word);
 		if(strcmp(word,"generate") == 0){
+			sprintf(message,"generate %d", arg->playerIndex);
 			setPlayerGenerate(arg->playersGameInfo, arg->playerIndex);
+			sendMessageToClients(arg->clientSockets, arg->playerCount, message);
 		}
 		else if(strcmp(word,"attack") == 0){
 			setPlayerAttack(arg->playersGameInfo, arg->playerIndex, arg->playerCount, getNextString(buffer));
+			sprintf(message,"attack %d", arg->playerIndex);
+			sendMessageToClients(arg->clientSockets, arg->playerCount, message);
 		}
 		else if(strcmp(word,"defend") == 0){
 			setPlayerDefend(arg->playersGameInfo, arg->playerIndex);
+			sprintf(message,"defend %d", arg->playerIndex);
+			sendMessageToClients(arg->clientSockets, arg->playerCount, message);
 		}
 		else if(strcmp(word, "inc_ohen_regen") == 0){
-			upgradeRegenOhen(&arg->playersGameInfo[0][arg->playerIndex]);
+			bool done = upgradeRegenOhen(&arg->playersGameInfo[0][arg->playerIndex]);
+			if(done == true){
+				sprintf(message,"inc_ohen_regen %d", arg->playerIndex);
+				sendMessageToClients(arg->clientSockets, arg->playerCount, message);
+			}
 		}
 		else if(strcmp(word, "inc_attack") == 0){
-			upgradeAttackDamage(&arg->playersGameInfo[0][arg->playerIndex]);
+			bool done = upgradeAttackDamage(&arg->playersGameInfo[0][arg->playerIndex]);
+			if(done == true){
+				sprintf(message,"inc_attack %d", arg->playerIndex);
+				sendMessageToClients(arg->clientSockets, arg->playerCount, message);
+			}
 		}
 		else if(strcmp(word, "inc_defence") == 0){
-			upgradeDefense(&arg->playersGameInfo[0][arg->playerIndex]);
+			bool done = upgradeDefense(&arg->playersGameInfo[0][arg->playerIndex]);
+			if(done == true){
+				sprintf(message,"inc_defence %d", arg->playerIndex);
+				sendMessageToClients(arg->clientSockets, arg->playerCount, message);
+			}
 		}
 		else if(strcmp(word,"disconnect") == 0){
 			arg->clientSockets[arg->playerIndex] = -1;
 			close(arg->sock);
+			sprintf(message,"inc_defence %d", arg->playerIndex);
+			sendMessageToClients(arg->clientSockets, arg->playerCount, message);
 			return NULL;
 		}
 	}
-	if(send(arg->sock, "YOU DIED !", strlen("YOU DIED"),0) < 0){
-			perror("YOU DIED MESSAGE : ");
-			exit(errno);
-	}
-	return NULL;
+	pthread_exit(NULL);
 }
 
 // Initialize the PlayersGameInfo array.
@@ -133,14 +170,24 @@ void askServerInfo(char * name, char * password, int * maxClients){
 }
 
 // Server main code.
-int main(){
+int main(int argc, char ** argv){
 	pthread_t * listenClient;
-	char name[50];
+	char * name = malloc(sizeof(char[50]));
 	char password[50];
 	int maxClients;
-	
-	askServerInfo(name, password, &maxClients);
 
+	bool end;
+	int aliveCount;
+	int lastAliveIndex;
+	
+	if(argc == 3){
+		name = argv[1];
+		maxClients = atoi(argv[2]);
+	}
+	else{
+		askServerInfo(name, password, &maxClients);
+	}
+	
 	SOCKADDR_IN socketAddress = { 0 };
 
 	SOCKADDR_IN clientAddress [8];
@@ -152,7 +199,8 @@ int main(){
 	int sock;
 	int clientCount = 0;
 	char buffer [512];
-
+	char message [256];
+	
 	socketAddress.sin_port = htons(PORT);
 	socketAddress.sin_family = AF_INET;
 	socketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -167,133 +215,143 @@ int main(){
 		exit(errno);
 	}
 	adressLenght = sizeof(clientAddress);
-	printf("\n");
 	
-	// LOOP Waiting for all the clients to connect.
-	while(clientCount != maxClients)
-	{
-		int n = 0;
-		fprintf(stderr,"Waiting for connexions ...\n");
-		clientSockets[clientCount] = accept(sock,(SOCKADDR *) &clientAddress[clientCount], &adressLenght);
-		if(clientSockets[clientCount] == INVALID_SOCKET){
-			perror("ACCEPT ERROR : ");
-			exit(errno);
-		}
-		if((n = recv(clientSockets[clientCount], buffer, sizeof buffer - 1, 0)) < 0){
-			perror("RECV ERROR 2");
-			exit(errno);
-		}
-		buffer[n] = '\0';
-		strcpy(clientName[clientCount],buffer);
+	while(1){	
+		clientCount = 0;
+		end = false;
+
+		printf("\n");
 		
-		//Print the event on the server.
-		printf("%s joined the server %s !\n", clientName[clientCount], name);
-		clientCount ++;
-		printf("%d/%d players connected\n\n", clientCount, maxClients);
-		
-		//Send message to all the old clients.
-		char * mess = " joined the server ";
-		mess = strcat(buffer,  mess);	
-		sprintf(mess,"%s !\n %d / %d players connected\n \n", mess, clientCount, maxClients);
-		for(int i = 0; i < clientCount-1; i++){
-            if(send(clientSockets[i], mess, strlen(mess),0) < 0){
-				perror("send error to all: ");
+		// LOOP Waiting for all the clients to connect.
+		while(clientCount != maxClients)
+		{
+			int n = 0;
+			fprintf(stderr,"Waiting for connexions ...\n");
+			clientSockets[clientCount] = accept(sock,(SOCKADDR *) &clientAddress[clientCount], &adressLenght);
+			if(clientSockets[clientCount] == INVALID_SOCKET){
+				perror("ACCEPT ERROR : ");
 				exit(errno);
 			}
-        }
-		//SEND A WELCOME MESSAGE TO THE NEWCOMER
-		char mes [256]  = "Welcome ";
-		strcat(mes, clientName[clientCount-1]);
-		sprintf(mes,"%s to the server %s !\n", mes, name);
-		if(send(clientSockets[clientCount-1], mes, strlen(mes),0) < 0){
-			perror("SEND ERROR TO NEWCOMER :");
-			exit(errno);
+			if((n = recv(clientSockets[clientCount], buffer, sizeof buffer - 1, 0)) < 0){
+				perror("RECV ERROR 2");
+				exit(errno);
+			}
+			buffer[n] = '\0';
+			strcpy(clientName[clientCount],buffer);
+			
+			//Print the event on the server.
+			printf("%s joined the server %s !\n", clientName[clientCount], name);
+			clientCount ++;
+			printf("%d/%d players connected\n\n", clientCount, maxClients);
+			
+			//Send message to all the old clients.
+			char * mess = " joined the server ";
+			mess = strcat(buffer,  mess);	
+
+			sprintf(mess,"%s !\n %d / %d players connected\n \n", mess, clientCount, maxClients);
+			for(int i = 0; i < clientCount-1; i++){
+				sendMessage(clientSockets[i], mess);
+			}
+			//SEND A WELCOME MESSAGE TO THE NEWCOMER
+			sprintf(message, "Welcome %s to the server %s !\n", clientName[clientCount-1], name);
+			sendMessage(clientSockets[clientCount-1], message);
 		}
-	}
-	
-	sleep(1);
-	// Send Ready to all the Clients
-	for(int i = 0; i < maxClients; i++){
-		if(send(clientSockets[i], "READY", strlen("READY"),0) < 0){
-			perror("SEND \"READY\" TO EVERYONE: ");
-			exit(errno);
+		
+		sleep(1);
+		
+		// Send Ready to all the Clients
+		sendMessageToClients(clientSockets, clientCount, "READY");
+		
+		sleep(1);
+		
+		//Sending client count to all the clients
+		for(int i = 0; i < maxClients; i++){
+			char cc = clientCount + '0';
+			if(send(clientSockets[i], &cc, sizeof(char), 0) < 0){
+				perror("SEND PLAYER COUNT TO EVERYONE: ");
+				exit(errno);
+			}
 		}
-	}
-	
-	sleep(1);
-	
-	//Sending client count to all the clients
-	for(int i = 0; i < maxClients; i++){
-		char cc = clientCount + '0';
-		if(send(clientSockets[i], &cc, sizeof(char), 0) < 0){
-			perror("SEND PLAYER COUNT TO EVERYONE: ");
-			exit(errno);
+		
+		listenClient = malloc(sizeof(pthread_t)*clientCount);
+		playersGameInfo = malloc(sizeof(Player) * maxClients);
+		initPlayersGameInfo(playersGameInfo, maxClients, clientName);
+		
+		ListenClientThreadArgs * args = malloc(sizeof(ListenClientThreadArgs)*clientCount);
+		// Creation des threads qui vont recevoir les infos des clients.
+		for(int i = 0; i < clientCount; i++){
+			args[i].clientSockets = clientSockets;
+			args[i].playersGameInfo = &playersGameInfo;
+			args[i].playerCount = clientCount;
+			args[i].sock = clientSockets[i];
+			args[i].playerIndex = i;
+			args[i].end = &end;
+			if(pthread_create(&listenClient[i], NULL, listenPlayer, &args[i]) == -1) {
+				perror("pthread_create");
+				return -1;
+			}
 		}
-	}
-	
-	listenClient = malloc(sizeof(pthread_t)*clientCount);
-	playersGameInfo = malloc(sizeof(Player) * maxClients);
-	initPlayersGameInfo(playersGameInfo, maxClients, clientName);
-	
-	ListenClientThreadArgs * args = malloc(sizeof(ListenClientThreadArgs)*clientCount);
-	// Creation des threads qui vont recevoir les infos des clients.
-	for(int i = 0; i < clientCount; i++){
-		args[i].clientSockets = clientSockets;
-		args[i].playersGameInfo = &playersGameInfo;
-		args[i].playerCount = clientCount;
-		args[i].sock = clientSockets[i];
-		args[i].playerIndex = i;
-		if(pthread_create(&listenClient[i], NULL, listenPlayer, &args[i]) == -1) {
-			perror("pthread_create");
-			return -1;
-		}
-	}
-	
-	bool end = 0;
-	int aliveCount = 0;
-	int lastAliveIndex;
-	
-	//Game loop
-	while(!end){
-		playTurn(playersGameInfo, maxClients);
-		aliveCount = 0;
-		//Win Verification
-		for(int i = 0; i<clientCount; i++){
-			if(playersGameInfo[i].ohen == playersGameInfo[i].max_ohen){
-				printf("%s won by suprematy !\n",clientName[i]);
+		
+		//Game loop
+		while(!end){
+			playTurn(clientSockets, playersGameInfo, maxClients);
+			aliveCount = 0;
+			//Win Verification
+			for(int i = 0; i < clientCount; i++){
+				if(playersGameInfo[i].ohen == playersGameInfo[i].max_ohen){
+					sprintf(message, "%s won by suprematy !\n", clientName[i]);
+					printf("%s", message);
+					sprintf(message,"GOSU %d", i);
+					sendMessageToClients(clientSockets, clientCount, message);
+					end = true;
+				}
+				if(playersGameInfo[i].health != 0){
+					aliveCount ++;
+					lastAliveIndex = i;
+				}
+			}		
+			if(aliveCount == 1){
+				sprintf(message, "%s won by K.O", clientName[lastAliveIndex]);
+				printf("%s",message); 
+				sprintf(message, "GOKO %d", lastAliveIndex);
+				sendMessageToClients(clientSockets, clientCount, message);
 				end = true;
 			}
-			if(playersGameInfo[i].health != 0){
-				aliveCount ++;
-				lastAliveIndex = i;
-			}
-		}		
-		if(aliveCount == 1){
-			printf("%s won by K.O !\n", clientName[lastAliveIndex]);
-			end = true;
-		}
-		char * gameInfo = serializePlayers(playersGameInfo, clientCount);
-		fprintf(stderr,"%s\n",gameInfo);
-		
-		//Send serialized infos to the players
-		for(int i = 0; i < clientCount; i++){
-			if(clientSockets[i] != -1){				
-				if(send(clientSockets[i], gameInfo, sizeof(char[256*clientCount]),0) < 0){
-					perror("SEND GAMEINFO ERROR : ");
-					exit(errno);
+			char * gameInfo = serializePlayers(playersGameInfo, clientCount);
+			fprintf(stderr,"%s\n",gameInfo);
+			
+			//Send serialized infos to the players
+			for(int i = 0; i < clientCount; i++){
+				if(clientSockets[i] != -1){				
+					if(send(clientSockets[i], gameInfo, sizeof(char[256*clientCount]),0) < 0){
+						perror("SEND GAMEINFO ERROR : ");
+						exit(errno);
+					}
 				}
 			}
+			bool verif = 1;
+			for(int i = 0; i < clientCount; i++){
+				if(clientSockets[i] != -1){
+					verif = 0;
+				}
+			}
+			if(verif == 1){
+				end = verif;
+				printf("EVERYONE DISCONNECTED\n");
+			}
+			sleep(1);
+		}
+		
+		//TODO : Freeing all the mallocs -> playersGameInfo
+		free(listenClient);
+		free(playersGameInfo);
+		
+		// Closing the sockets
+		for(int i = 0; i < clientCount-1; i++){
+			if(clientSockets[i] != 0)
+				close(clientSockets[i]);
 		}
 		sleep(1);
 	}
-	
-	//TODO : Freeing all the mallocs -> playersGameInfo
-	
-	// Closing the sockets
-	for(int i = 0; i < clientCount-1; i++){
-		if(clientSockets[i] != 0)
-			close(clientSockets[i]);
-	}
-
 	return 0;
 }

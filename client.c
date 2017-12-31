@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <pthread.h>
+#include <signal.h>
 #include "display.h"
 #include "player.h"
 #include "socket.h"
@@ -11,6 +12,12 @@
 #include "client.h"
 
 int sock;
+
+// Close the game properly
+void closeGame(){
+	askServerToDisconnect();
+	close(sock);
+}
 
 //Send the char array str to ther server throught the socket given as global parameter.
 void sendMessageToServer(char * str){
@@ -91,7 +98,7 @@ Player deserializePlayer(char * str){
 	p.max_health 	= getNextNumber(str);
 	p.regen_ohen 	= getNextNumber(str);
 	p.regen_health 	= getNextNumber(str);
-	p.vulnerable 	= getNextNumber(str);
+	p.dead 			= getNextNumber(str);
 	p.targetId		= getNextNumber(str);
 	p.state 		= getNextNumber(str);
 	return p;
@@ -122,13 +129,30 @@ void * listenFromServer(void * args){
 			exit(errno);
 		}
 		if(n != 0){
-			if(strcmp(gameInfo,"YOU DIED !") == 0){
-				printf("YOU DIED !");
-				printf("YOU DIED !");
-				printf("YOU DIED !");
-				printf("YOU DIED !");
-				printf("YOU DIED !");
-				sleep(2);
+			char * cpy = malloc(sizeof(char[256*arg->clientCount]));
+			strcpy(cpy, gameInfo);
+			char * word = getNextString(cpy) ;
+			if(word[0]-'0' > 9 || word[0]-'0' < 0){
+				if(strcmp(word,"GOSU") == 0){
+					int winnerIndex = string2unsignedint(getNextString(cpy));
+					fprintf(stderr,"%s won by supremacy !", arg->playersGameInfo[0][winnerIndex].nickname);
+					scanf("%s",word);
+					exit(1);
+				}
+				else if(strcmp(word, "GOKO") == 0){
+					int winnerIndex = string2unsignedint(getNextString(cpy));
+					fprintf(stderr,"%s won by K.O !", arg->playersGameInfo[0][winnerIndex].nickname);
+					scanf("%s",word);
+					exit(1);
+				}
+				else if(strcmp(word, "KO") == 0){
+					*arg->dead = true;
+				}
+				else{
+					//int len = strlen(word);
+					//printf("strlen(word) = %d\n", len);
+					//printf("%s \n%s\n", word, cpy);
+				}
 			}
 			else
 				arg->playersGameInfo[0] = deserializePlayers(gameInfo, arg->clientCount);
@@ -143,10 +167,10 @@ int menuConnexion(int color, int spacingLeft, int size, char * nickname, char * 
 	beginMenu(color, spacingLeft, size);
 	messageLine(0, "CONNEXION :", color, spacingLeft, size);
 	emptyColoredShadowedLine(1, color, spacingLeft, size);
-	c1.x = inputLine("Nickname :", color, 7, 30, spacingLeft, size);
+	c1.x = inputLine("Nickname :", color, 7, size-10-spacingLeft-8, spacingLeft, size);
 	c1.y = 10;
 	emptyColoredShadowedLine(1, color, spacingLeft, size);
-	c2.x = inputLine("Hostname :", color, 7, 30, spacingLeft, size);
+	c2.x = inputLine("Hostname :", color, 7, size-10-spacingLeft-8, spacingLeft, size);
 	c2.y = c1.y+4;
 	emptyColoredShadowedLine(1, color, spacingLeft, size);
 	endMenu(3, color, spacingLeft, size);
@@ -168,11 +192,20 @@ int displayGameInfos(int color, int spacingLeft, int size, Player ** gameInfo, i
 		for(int i = 0; i < playerCount; i++){
 			char message[64] = "";
 			sprintf(message,"%d) %s's Ohen", i, gameInfo[0][i].nickname);
-			progBar(spacingLeft, message, size, gameInfo[0][i].ohen, gameInfo[0][i].max_ohen, color, YELLOW);
+			Color c;
+			if((Color)color != YELLOW)
+				c = YELLOW;
+			else
+				c = BLUE;
+			progBar(spacingLeft, message, size, gameInfo[0][i].ohen, gameInfo[0][i].max_ohen, color, c);
 			sprintf(message,"%d) %s's Health", i, gameInfo[0][i].nickname);
 			emptyColoredShadowedLine(1, color, spacingLeft, size);
-			progBar(spacingLeft, message, size, gameInfo[0][i].health, gameInfo[0][i].max_health, color, GREEN);
-			sprintf(message,"%d) %s's state : %s | GEN : %d | ATK : %d | DEF : %d", i, gameInfo[0][i].nickname, statusToString(gameInfo[0][i].state), gameInfo[0][i].regen_ohen, gameInfo[0][i].attack_damage, gameInfo[0][i].defense);
+			if((Color)color != GREEN)
+				c = GREEN;
+			else
+				c = BLUE;
+			progBar(spacingLeft, message, size, gameInfo[0][i].health, gameInfo[0][i].max_health, color, c);
+			sprintf(message,"%d) %s's state : %s - GEN : %d | ATK : %d | DEF : %d", i, gameInfo[0][i].nickname, statusToString(gameInfo[0][i].state), gameInfo[0][i].regen_ohen, gameInfo[0][i].attack_damage, gameInfo[0][i].defense);
 			messageLine(-1, message, color, spacingLeft, size);
 		}
 		endMenuNotif(color, "Type anything to update or exit", spacingLeft, size);
@@ -195,12 +228,12 @@ int displayActionChoice(int color, char * notifMessage, int spacingLeft, int siz
 	scanf("%s", message);
 	if(strcmp(message,"1") == 0 || strcmp(message,"generate") == 0){
 		askServerToGenerate();
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"2") == 0 || strcmp(message,"defend") == 0){
 		askServerToDefend();
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"3") == 0 || strcmp(message,"attack") == 0){
@@ -208,11 +241,11 @@ int displayActionChoice(int color, char * notifMessage, int spacingLeft, int siz
 		printf("Id of the target ? -> ");
 		scanf("%d",&targetId);
 		askServerToAttack(targetId);
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"exit") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else{
@@ -235,19 +268,19 @@ int displayIntroMenu(int color, int spacingLeft, int size, char * notifMessage){
 	
 	scanf("%s", message);
 	if(strcmp(message,"1") == 0 || strcmp(message,"connect") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return CONNEXION;
 	}
 	else if(strcmp(message,"2") == 0 || strcmp(message,"custom") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return CUSTOMIZATION;
 	}
 	else if(strcmp(message,"3") == 0 || strcmp(message,"upgrade") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return TUTORIAL;
 	}
 	else if(strcmp(message,"exit") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		askServerToDisconnect();
 		close(sock);
 		exit(0);
@@ -286,23 +319,23 @@ int displayMainMenu(int color, int spacingLeft, int size, char * notifMessage){
 	
 	scanf("%s", message);
 	if(strcmp(message,"1") == 0 || strcmp(message,"see") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return DISPLAY_GAME_INFO;
 	}
 	else if(strcmp(message,"2") == 0 || strcmp(message,"choose") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return DISPLAY_ACTION_CHOICE;
 	}
 	else if(strcmp(message,"3") == 0 || strcmp(message,"upgrade") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return DISPLAY_UPGRADES;
 	}
 	else if(strcmp(message,"4") == 0 || strcmp(message,"custom") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return CUSTOMIZATION;
 	}
 	else if(strcmp(message,"exit") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		askServerToDisconnect();
 		close(sock);
 		exit(0);
@@ -326,21 +359,21 @@ int displayUpgradesMenu(int color, int spacingLeft, int size, char * notifMessag
 	scanf("%s", message);
 	if(strcmp(message,"1") == 0 || strcmp(message,"ohenregen") == 0){
 		askServerToUpgradeOhenRegen();
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"2") == 0 || strcmp(message,"attack") == 0){
 		askServerToUpgradeAttack();
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"3") == 0 || strcmp(message,"defence") == 0){
 		askServerToUpgradeDefense();
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else if(strcmp(message,"exit") == 0 || strcmp(message,"return") == 0){
-		notifMessage = "";
+		emptyString(notifMessage);
 		return MAIN;
 	}
 	else{
@@ -349,7 +382,7 @@ int displayUpgradesMenu(int color, int spacingLeft, int size, char * notifMessag
 	}
 }
 
-int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage){
+int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage, Menu menu){
 	char message[256] = "";
 	int a = 1;
 	beginMenu(*color, spacingLeft, *size);
@@ -358,44 +391,80 @@ int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage){
 	strlen(notifMessage) == 0 ? 
 		endMenu(2, *color, spacingLeft, *size):
 		endMenuNotif(*color, notifMessage, spacingLeft, *size);
+	scanf("%s", message);
+	if(strcmp(message, "color") == 0 || strcmp(message, "1") == 0){
+		printf("Wanted color : ");
 		scanf("%s", message);
-	char * word = getNextString(message);
-	fprintf(stderr, "word : %s", word);
-	if(strcmp(word,"color") == 0 || strcmp(word,"1") == 0){
-		word = getNextString(message);
-		fprintf(stderr, "word : %s", word);
-		int arg = string2unsignedint(word);
+		int arg = string2unsignedint(message);
 		if(arg != -1){
 			*color = arg;
-			notifMessage = "";
-			return MAIN;
+			emptyString(notifMessage);
+			return menu;
+		}
+		else if(strcmp(message,"red") == 0){
+			*color = RED;
+			emptyString(notifMessage);
+			return menu;
+		}
+		else if(strcmp(message,"blue") == 0){
+			*color = BLUE;
+			emptyString(notifMessage);
+			return menu;
+		}
+		else if(strcmp(message,"yellow") == 0){
+			*color = YELLOW;
+			emptyString(notifMessage);
+			return menu;
+		}
+		else if(strcmp(message,"green") == 0){
+			*color = GREEN;
+			emptyString(notifMessage);
+			return menu;
+		}
+		else if(strcmp(message,"pink") == 0){
+			*color = PINK;
+			emptyString(notifMessage);
+			return menu;
 		}
 		else{
-			sprintf(notifMessage, "Second arg isn't a number : %s", word);
-			return MAIN;
+			sprintf(notifMessage, "Second arg isn't a number : %s", message);
+			return menu;
 		}
 	}
-	else if(strcmp(word,"size") == 0 || strcmp(word,"2") == 0){
-		word = getNextString(message);
-		fprintf(stderr, "word : %s", word);
-		int arg = string2unsignedint(word);
-		if(arg != -1){
+	else if(strcmp(message,"size") == 0 || strcmp(message,"2") == 0){
+		printf("Wanted size : ");
+		scanf("%s", message);
+		int arg = string2unsignedint(message);
+		if(arg != -1 && arg >= 70){
 			*size = arg;
-			notifMessage = "";
-			return MAIN;
+			emptyString(notifMessage);
+			return menu;
 		}
 		else{
-			sprintf(notifMessage, "Second arg isn't a number : %s", word);
-			return MAIN;
+			sprintf(notifMessage, "Second arg is invalid : %s", message);
+			return menu;
 		}
 	}
 	else{
-		return MAIN;
+		sprintf(notifMessage, "Invalid CMD : %s", message);
+		return CUSTOMIZATION;
 	}
-	return MAIN;
+	return menu;
+}
+
+void displayGameOver(int color, int spacingLeft, int size, char * message){
+	char bin [32];
+	beginMenu(color, spacingLeft, size);
+	bold();
+	messageLine(-1, "G A M E  O V E R", color, spacingLeft, size);
+	messageLine(-1, message, color, spacingLeft, size);
+	normal();
+	endMenu(2, color, spacingLeft, size);
+	scanf("%s", bin);
 }
 
 int main(){
+	signal(SIGINT, closeGame);
 	pthread_t listenServer;
 	Color color = RED;
 	int spacingLeft = 4;
@@ -403,6 +472,7 @@ int main(){
 	char buffer [512];
 	char notifMessage [256] = "";
 	int nextMenuId = INTRO;
+	bool dead = false;
 	
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock == -1){
@@ -425,7 +495,7 @@ int main(){
 				nextMenuId = displayIntroMenu(color, spacingLeft, size, notifMessage);
 				break;
 			case CUSTOMIZATION:
-				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage);
+				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage, nextMenuId);
 				break;
 			case CONNEXION:
 				nextMenuId = menuConnexion(color, spacingLeft, size, nickname, hostname, notifMessage);
@@ -490,12 +560,13 @@ int main(){
 	args.playersGameInfo = &playersGameInfo;
 	args.sock = sock;
 	args.clientCount = clientCount;
+	args.dead = &dead;
 	if(pthread_create(&listenServer, NULL, listenFromServer, &args) == -1) {
 		perror("pthread_create");
 		return -1;
     }
 	
-	while(1){
+	while(!dead){
 		switch(nextMenuId){
 			case MAIN:
 				nextMenuId = displayMainMenu(color, spacingLeft, size, notifMessage);
@@ -510,7 +581,7 @@ int main(){
 				nextMenuId = displayUpgradesMenu(color, spacingLeft, size, notifMessage);
 				break;
 			case CUSTOMIZATION:
-				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage);
+				nextMenuId = persoMenu(&color, spacingLeft, &size, notifMessage, nextMenuId);
 				break;
 			case TUTORIAL:
 				nextMenuId = tutorial(color, spacingLeft, size, notifMessage);
@@ -522,6 +593,7 @@ int main(){
 				nextMenuId = displayMainMenu(color, spacingLeft, size, notifMessage);
 		}
 	}
+	displayGameOver(color, spacingLeft, size, "YOU GOT KILLED");
 	askServerToDisconnect();
 	close(sock);
 	return 0;

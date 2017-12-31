@@ -8,5 +8,6 @@ typedef struct {
 	int sock;
 	int playerIndex;
 	int playerCount;
+	bool * end;
 } ListenClientThreadArgs;
 #endif

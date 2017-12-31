@@ -16,7 +16,7 @@ Player createPlayer(int id, char * nickname){
 	p.max_health 	= 100;
 	p.regen_ohen 	= 1;
 	p.regen_health 	= 1;
-	p.vulnerable 	= true;
+	p.dead 	= true;
 	p.state 		= GENERATE;
 	return p;
 }
@@ -34,7 +34,7 @@ int * player2CharArray(Player p){
 	arr[7] = p.max_health;
 	arr[8] = p.regen_ohen;
 	arr[9] = p.regen_health;
-	arr[10] = p.vulnerable;
+	arr[10] = p.dead;
 	arr[11] = p.targetId;
 	arr[12] = p.state;
 	return arr;
@@ -53,7 +53,7 @@ Player intArray2Player(int * arr){
 	p.max_health 	= arr[7];
 	p.regen_ohen 	= arr[8];
 	p.regen_health 	= arr[9];
-	p.vulnerable 	= arr[10];
+	p.dead 	= arr[10];
 	p.targetId 		= arr[11];
 	p.state 		= arr[12];
 	return p;
@@ -82,7 +82,7 @@ char * serializePlayer(Player p){
 	sprintf(charr,"%s%d/", charr, p.max_health);
 	sprintf(charr,"%s%d/", charr, p.regen_ohen);
 	sprintf(charr,"%s%d/", charr, p.regen_health);
-	sprintf(charr,"%s%d/", charr, p.vulnerable);
+	sprintf(charr,"%s%d/", charr, p.dead);
 	sprintf(charr,"%s%d/", charr, p.targetId);
 	sprintf(charr,"%s%d/", charr, p.state);
 	return charr;
@@ -173,32 +173,38 @@ void defend(Player * defender){
 }
 
 // Upgrade the Attack Damage of the Player p
-void upgradeAttackDamage(Player * p){
+bool upgradeAttackDamage(Player * p){
 	int price = 8*p->attack_damage;
 	if(p->ohen >= price){
 		p->ohen -= price;
 		p->attack_damage++;
+		return true;
 	}
+	return false;
 }
 
 // Upgrade the Ohen Regeneration of the Player p
-void upgradeRegenOhen(Player * p){
+bool upgradeRegenOhen(Player * p){
 	int price = 10*p->regen_ohen;
 	printf("Ohen : %d\n", p->ohen);
 	printf("Price : %d\n", price);
 	if(p->ohen >= price){
 		p->ohen -= price;
 		p->regen_ohen++;
+		return true;
 	}
+	return false;
 }
 
 // Upgrade the Defense of the Player p.
-void upgradeDefense(Player * p){
+bool upgradeDefense(Player * p){
 	int price = 9*p->defense;
 	if(p->ohen >= price){
 		p->ohen -= price;
 		p->defense++;
+		return true;
 	}
+	return false;
 }
 
 //Upgrade Health regeneration of the Player p.

@@ -22,7 +22,7 @@ typedef struct{
 
 	int targetId;	
 
-	bool vulnerable;
+	bool dead;
 	//int consecutiveTurns; //In development game mechanic.
 	
 	Status state;
@@ -33,9 +33,9 @@ Player createPlayer();
 void generate(Player * player);
 void attack(Player * attacker, Player * defender);
 void defend(Player * defender);
-void upgradeAttackDamage(Player * p);
-void upgradeRegenOhen(Player * p);
-void upgradeDefense(Player * p);
+bool upgradeAttackDamage(Player * p);
+bool upgradeRegenOhen(Player * p);
+bool upgradeDefense(Player * p);
 void upgradeHealthRegen(Player * p);
 char * serializePlayer(Player p);
 char * serializePlayers(Player * p, int playerCount);

@@ -27,21 +27,29 @@ int getNextNumber(char * str){
 	return string2unsignedint(getNextString(str));
 }
 
+//Empty the string arr
+void emptyString(char * arr){
+	memset(arr, 0, strlen(arr));
+}
+
 // Parsing a char array and getting the next number from it.
 char * getNextString(char * str){
 	char * buffer = malloc(sizeof(char)*8);
 	int len = strlen(str);
-	while(str[0]!= '/' && str[0] != 0 && str[0] != 32){
+	while(str[0]!= '/' && str[0] != 0 && str[0] != 32 && len > 0){
 		sprintf(buffer,"%s%c",buffer,str[0]);
 		for(int i = 0; i<len;i++){
 			str[i] = str[i+1];
 		}
-		str[len] = '\0';
 		len--;
+		str[len] = '\0';
 	}
-	for(int i = 0; i<len;i++){
-		str[i] = str[i+1];
+	if(len > 0){
+		for(int i = 0; i<len;i++){
+			str[i] = str[i+1];
+		}
+		len--;
+		str[len] = '\0';
 	}
-	str[len] = '\0';
 	return buffer;
 }

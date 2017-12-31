@@ -7,5 +7,6 @@ typedef struct {
 	Player ** playersGameInfo;
 	int sock;
 	int clientCount;
+	bool * dead;
 } ListenServerThreadArgs;
 #endif

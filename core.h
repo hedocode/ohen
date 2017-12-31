@@ -26,5 +26,5 @@ typedef enum{
 int string2unsignedint(char * stringNumber);
 int getNextNumber(char * str);
 char * getNextString(char * str);
-
+void emptyString(char * arr);
 #endif

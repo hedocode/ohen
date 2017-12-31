@@ -16,8 +16,9 @@
 \chapter{Description}
 \section{Un programme "serveur / client".}
 Ce programme possède un makefile permettant de compiler un client et un serveur.
-Le serveur spécifie son nom et le nombre de clients qu'il va accepter et une fois que le nombre indiqué de clients est connecté, il va lancer la partie, recevoir les messages des clients, et leurs répondre toutes les secondes, après les avoir fait jouer. Seul le serveur peut modifier les informations de la partie, le client ne possède qu'une "télécommande" lui permettant de demander au serveur d'exécuter une action.
-Le client va quand à lui, proposer une personnalisation de l'interface utilisateur, permettant de changer la taille et la couleur de cette dernière, ainsi qu'un tutoriel, expliquant la base du jeu. Et enfin, la connexion à un serveur, sous un certain pseudonyme.
+Le serveur spécifie son nom et le nombre de clients qu'il va accepter et une fois que le nombre indiqué de clients est connecté, s'il ne le fait pas par paramètre, cela demandera à l'utilisateur de le rentrer manuellement, ensuite il va lancer la partie, recevoir les messages des clients, et leurs répondre toutes les secondes, après les avoir fait jouer. Seul le serveur peut modifier les informations de la partie, le client ne possède qu'une "télécommande" lui permettant de demander au serveur d'exécuter une action. Le serveur possède un thread pour chaque client afin de les écouter et de réagir en fonction.\\\\
+Le client va quand à lui, proposer une personnalisation de l'interface utilisateur, permettant de changer la taille et la couleur de cette dernière, ainsi qu'un tutoriel, expliquant la base du jeu. Le client possède un thread qui va écouter le serveur afin de récupérer les informations du jeu. Et enfin, la connexion à un serveur, sous un certain pseudonyme.\\\\
+Afin que le serveur ne s'arrête pas en cas d'arrêt du client par signal, j'ai rediriger ce signal pour qu'il ferme correctement le jeu et déconnecte le client avant de l'arrêter.
 \section{Ohen, jeu de stratégie en réseau.}
 Dans une partie d'Ohen, tout les joueurs possèdent de la vie et du Ohen. 
 Quand la vie d'un joueur tombe à zéro, il meurt et ne peut plus jouer.

@@ -1,6 +1,6 @@
 #ifndef _clientThread
 #define _clientThread
-#include "player.h"
+#include "../lib/player.h"
 
 
 typedef struct {

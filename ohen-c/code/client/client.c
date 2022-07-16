@@ -6,8 +6,8 @@
 #include <pthread.h>
 #include <signal.h>
 #include "display.h"
-#include "player.h"
-#include "socket.h"
+#include "../lib/player.h"
+#include "../lib/socket.h"
 #include "clientThread.h"
 #include "client.h"
 

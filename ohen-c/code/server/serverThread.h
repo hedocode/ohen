@@ -1,6 +1,6 @@
 #ifndef _serverThread
 #define _serverThread
-#include "player.h"
+#include "../lib/player.h"
 
 typedef struct {
 	Player ** playersGameInfo;

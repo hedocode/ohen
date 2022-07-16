@@ -16,6 +16,7 @@ Player createPlayer(int id, char * nickname){
 	p.max_health 	= 100;
 	p.regen_ohen 	= 1;
 	p.regen_health 	= 1;
+	p.targetId = 999;
 	p.dead 	= true;
 	p.state 		= GENERATE;
 	return p;

@@ -1,7 +1,7 @@
 #ifndef _player
 #define _player
 
-#include "core.h"
+#include "../lib/core.h"
 	
 typedef struct{
 	int id;

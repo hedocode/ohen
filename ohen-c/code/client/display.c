@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "display.h"
-#include "core.h"
+#include "../lib/core.h"
 
 // Put the console cursor at the x,y position.
 void putCursor(int x, int y){ //printf(27 91 65)

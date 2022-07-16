@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include "player.h"
-#include "socket.h"
+#include "../lib/player.h"
+#include "../lib/socket.h"
 #include "serverThread.h"
 
 //Send a message throught the socket sock.

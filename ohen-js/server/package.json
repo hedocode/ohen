@@ -1,0 +1,19 @@
+{
+  "name": "ohen",
+  "version": "1.0.0",
+  "description": "ohen game using websockets and fastify",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server_script.js",
+    "dev": "fastify start -w -l info server_cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "SEE LICENCE IN LICENCE.md",
+  "dependencies": {
+    "@fastify/websocket": "^6.0.1",
+    "dotenv": "^16.0.1",
+    "fastify": "^4.2.1",
+    "fastify-cli": "^4.3.0"
+  }
+}

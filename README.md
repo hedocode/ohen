@@ -6,7 +6,7 @@ Dans une partie d'Ohen, tout les joueurs possèdent de la vie et du Ohen.
 Quand la vie d'un joueur tombe à zéro, il meurt et ne peut plus jouer.
 Quand un joueur atteint le maximum d'Ohen, ou est le dernier à être en vie, il gagne.
 Chaque joueur choisit une action, que le serveur va lui faire faire toute les secondes.
-Il peut "générer" du Ohen, "attaquer" un joueur, ou se "d�fendre".
+Il peut *générer* du Ohen, *attaquer* un joueur, ou se *défendre*.
 Quand un joueur en attaque un autre, il dépense du Ohen proportionnellement à son attaque.
 Quand un joueur se défends, il arrète de générer du Ohen et génère de la vie à la place, tout en réduisant les dégâts qu'il se prends.
 Il peut également à tout moment, acheter une amélioration contre de l'Ohen, augmentant ses statistiques telles que la régénération d'Ohen, l'attaque, ou la défense.

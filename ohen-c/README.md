@@ -1,5 +1,5 @@
 # ohen
-Little C network game.
+Little C network game (CLI).
 
 
 ## Prerequierements
@@ -37,3 +37,9 @@ make all
 ./server
 ```
 
+
+
+## Screenshots
+
+![start](documentation/assets/ohen_connected.jpg)
+![win](documentation/assets/ohen_win.jpg)

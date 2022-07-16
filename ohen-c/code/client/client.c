@@ -403,6 +403,7 @@ int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage, M
 	beginMenu(*color, spacingLeft, *size);
 	a = messageLine(a, "Change Color", *color, spacingLeft, *size);
 	a = messageLine(a, "Change Window Width", *color, spacingLeft, *size);
+	a = messageLine(a, "Exit", *color, spacingLeft, *size);
 	strlen(notifMessage) == 0 ? 
 		endMenu(2, *color, spacingLeft, *size):
 		endMenuNotif(*color, notifMessage, spacingLeft, *size);
@@ -460,7 +461,9 @@ int persoMenu(Color * color, int spacingLeft, int * size, char * notifMessage, M
 			return menu;
 		}
 	}
-	else{
+	else if(strcmp(message, "exit") == 0 || strcmp(message, "3") == 0) {
+		return MAIN;
+	} else {
 		sprintf(notifMessage, "Invalid CMD : %s", message);
 		return CUSTOMIZATION;
 	}

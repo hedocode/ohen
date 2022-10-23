@@ -18,6 +18,7 @@ class Player {
 
         this.action = "ohen";
         this.target = "self";
+        this.game_status = "waiting";// playing
     }
 }
 

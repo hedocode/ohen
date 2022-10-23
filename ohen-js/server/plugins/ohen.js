@@ -1,123 +1,41 @@
-const Player = require("../model/player.class");
 const fp = require("fastify-plugin");
+const Game = require("../model/game.class");
 
 async function ohen(fastify) {
 
-    const players = [];
-    const tickPerSeconds = 10;
+    const games = [];
+    const users = [];
 
-    function addPlayer(nickname, ip) {
-        players.push(
-            new Player(nickname, ip)
-        );
-        
-        sendPlayersDataToEveryone();
+
+    function addPlayer(game, nickname, ip) {
+        game.addPlayer(nickname, ip);   
+        game.sendPlayersDataToEveryone(fastify);
     }
 
-    function sendObject(connection, object) {
-        (connection.socket || connection).send(
-            JSON.stringify(object)
+    function createGame(name, password, maxPlayers, tickPerSeconds) {
+        games.push(
+            new Game(name, password, maxPlayers, tickPerSeconds)
         );
     }
 
-    function sendToAllPlayers(type, object) {
-        fastify.websocketServer.clients.forEach(
-            (connection) => {
-                sendObject(
-                    connection, {
-                        "type": type,
-                        "data": object
-                    }
-                );
-            }
+    function sendGames(connection) {
+        fastify.sendData(
+            connection,
+            "games",
+            games
         )
     }
 
-    function sendPlayersDataToEveryone() {
-        fastify.websocketServer.clients.forEach(
-            (connection) => {
-                sendPlayers(connection);
-            }
+    function sendUsers(connection) {
+        fastify.sendData(
+            connection,
+            "users",
+            users
         )
-    }
-
-    function sendPlayers(connection) {
-        sendObject(
-            connection, {
-                "type": "players",
-                "data": players
-            }
-        );
-    }
-
-    function getPlayerFromConnection(connection) {
-        return players.find(p => p.nickname === connection.socket.nickname);
-    }
-
-    function playerWon() {
-        const alivePlayers = players.filter(p => !p.dead());
-        const lastAlive = alivePlayers.length === 1;
-        const maxOhenPlayers = players.filter(p => p.ohen >= p.ohen_max);
-
-        if(lastAlive) {
-            return alivePlayers
-        }
-        if(maxOhenPlayers.length > 0) {
-            return maxOhenPlayers
-        }
-
-        return [];
-    }
-
-    function step() {
-        const winner = playerWon();
-        
-        if(winner.length == 0){
-            players.forEach(
-                (player) => {
-                    if(player.action === "ohen") {
-                        player.ohen += player.ohen_regen / tickPerSeconds;
-                    }
-
-                    if(player.action === "attack") {
-                        const target = players.find(
-                            p => p.nickname == player.target
-                        );
-
-                        // console.log("target : %o", target);
-                        
-                        let damage;
-                        if(target.action === "defence") {
-                            damage = (player.attack - target.defence) / tickPerSeconds;
-                        } else {
-                            damage = player.attack / tickPerSeconds;
-                        }
-
-                        if(target.life - damage < 0) {
-                            target.life = 0;
-                        } else {
-                            target.life -= damage
-                        }
-                    }
-                }
-            )
-            
-            sendPlayersDataToEveryone();
-            setTimeout(
-                step,
-                1000 / tickPerSeconds
-            );
-        } else {
-            sendToAllPlayers("winner", winner);
-        }
-    }
-
-    function startGame() {
-        step()
     }
 
     fastify.get(
-        '/',
+        '/game',
         { websocket: true },
         (
             connection /* SocketStream */,
@@ -128,30 +46,43 @@ async function ohen(fastify) {
                 message => {
                     const { type, data } = JSON.parse(message);
 
-                   
                     if(type === "connect") {
                         connection.socket.nickname = data.nickname;
-                        addPlayer(data.nickname, req.socket.remoteAddress);
-                        sendObject(
+                        users.push(data.nickname);
+                        fastify.sendData(
                             connection,
-                            {
-                                "type": "message",
-                                "data": `Hello ${data.nickname}`
-                            }
+                            "message",
+                            `Hello ${data.nickname}`
                         );
-                        sendPlayers(connection)
+                        sendUsers(connection);
+                        sendGames(connection);
                     }
+
+                    if(type === "game__create") {
+                        const { name, password, maxPlayers, tickPerSeconds } = data;
+                        createGame(name, password, maxPlayers, tickPerSeconds);
+                        sendGames(connection);
+                    }
+
+                    if(type === "game__join") {
+                        const { nickname, gameName } = data;
+                        addPlayer(
+                            games.find(
+                                (g) => g.name = gameName
+                            ),
+                            nickname
+                        )
+                    }
+
+                    if(type === "game__leave") {
+
+                        sendGames(connection);
+                    }
+                   
                     
-                    if(type === "ready") {
-                        getPlayerFromConnection(connection).ready = true;
-                        sendPlayersDataToEveryone();
-                        if(
-                            players.filter(
-                                p => p.ready === true
-                            ).length === players.length
-                        ) {
-                            startGame();
-                        }
+                    if(type === "toggleReady") {
+                        const targetGame = games.find(g => g.name == data.game_name);
+                        targetGame.toggleReady(connection);
                     }
 
                     if(type === "action") {

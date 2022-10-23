@@ -1,90 +1,92 @@
 import React, { Fragment, useEffect, useState } from "react";
+import send from "../functions/send";
+import Connexion from "./Connexion";
+import { GameContext } from "./GameContext";
+import GameCreator from "./GameCreator";
 
-
-function App() {
- const [socket, setSocket] = useState(null);
-  
+function App({
+  server = ""
+}) {
+  const [socket, setSocket] = useState(null);
 
   const [message, setMessage] = useState("");
-  const [serverAdress, setServerAdress] = useState("");
-  const [players, setPlayers] = useState([]);
+  const [games, setGames] = useState([]);
+  const [users, setUsers] = useState([]);
+
   const [nickname, setNickName] = useState("");
+
+  // Game Info
+  const [players, setPlayers] = useState([]);
   const [winner, setWinner] = useState(false);
+
+  const allData = {
+    server,
+    socket, setSocket,
+    message, setMessage,
+    games, setGames,
+    players, setPlayers,
+    nickname, setNickName,
+    winner, setWinner,
+    users, setUsers,
+  };
   
   useEffect(
     () => {
+      function onConnect() {
+        send(
+          socket,
+          "connect",
+          {
+                nickname: nickname
+          }
+        );
+      }
+      
       if(socket) {
-        socket.addEventListener(
-          "open",
-          () => {
-            // envoi d'un message au serveur
-            socket.send(
-              JSON.stringify(
-                {
-                  type: "connect",
-                  data: {
-                    nickname: nickname
-                  }
-                }
-              )
-            );
-          }
-        );
-        
+        socket.removeEventListener("open", onConnect);
+        socket.addEventListener("open", onConnect);
+      }
+
+
+      function onMessage({ data }) {
+        const { type, data: d } = JSON.parse(data);
+
+        const messageSetter = {
+          "message": setMessage,
+          "players": setPlayers,
+          "games": setGames,
+          "users": setUsers,
+          "winner": setWinner,
+        };
+
+        messageSetter[type](d);
+      }
+
+      if(socket) {
         // réception d'un message envoyé par le serveur
-        socket.addEventListener(
-          "message",
-          ({ data }) => {
-            const { type, data: d } = JSON.parse(data);
-
-            if(type === "message") {
-              setMessage(d);
-            }
-
-            if(type === "players") {
-              setPlayers(d);
-            }
-
-            if(type === "winner") {
-              setWinner(d);
-            } 
-          
-            // switch (packet.type) {
-            //   case "bonjour du serveur":
-            //     // ...
-            //     break;
-            //   default:
-            //     break;
-            // }
-          }
-        );
+        socket.removeEventListener("message", onMessage);
+        socket.addEventListener("message", onMessage);
       }
     }, [socket]
   )
 
-  function connectToServer() {
-    setSocket(
-      new WebSocket("ws://" + serverAdress)
-    )
+  function joinGame(gameName) {
+    send(
+      socket,
+      "game__join", {
+        gameName: gameName,
+        nickname: nickname
+      }
+    );
   }
 
-  function send(type, data) {
-    socket.send(
-      JSON.stringify(
-        {
-          type: type,
-          data: data,
-        }
-      )
-    )
-  }
-
-  function ready() {
-    send("ready");
+  function toggleReady() {
+    send(socket, "toggleReady");
   }
 
   function attack(player) {
     send(
+      socket,
       "action",
       {
         action: "attack",
@@ -94,34 +96,56 @@ function App() {
   }
 
   function defend() {
-    send("action", {action: "defence"})
+    send(socket, "action", {action: "defence"})
   }
 
   function ohen() {
-    send("action", {action: "ohen"})
+    send(socket, "action", {action: "ohen"})
   }
 
+
+  console.log("games : %o", games);
+  console.log("users : %o", users);
+
   return (
-    <div>
+    <GameContext.Provider
+      value={allData}
+    >
       {!socket ? (
-        <Fragment>
-          <div>
-            <label>Server :</label>
-            <input value={serverAdress} onChange={ (e) => setServerAdress(e.target.value)}/>
-          </div>
-          <div>
-            <label>Nickname :</label>
-            <input value={nickname} onChange={ (e) => setNickName(e.target.value)}/>
-          </div>
-          <button
-            onClick={connectToServer}
-          >
-            Connect
-          </button>
-        </Fragment>
+        <Connexion
+          server={server}
+          setSocket={setSocket}
+          nickname={nickname}
+          setNickName={setNickName}
+        />
       ) : (
         <div>
-          Server : {message}
+          <span>Server : {message}</span>
+
+          <span>Open Games :</span>
+          {games.map(
+            (game) => (
+              <article>
+                <div>{game.name}</div>
+                <button
+                  onClick={() => joinGame(game.name)}
+                >
+                  Join
+                </button>
+              </article>
+            )
+          )}
+          <GameCreator/>
+
+          <span>Connected Users :</span>
+          {users.map(
+            (user) => (
+              <article>
+                <div>{ user }</div>
+              </article>
+            )
+          )}
+
 
           <div>
             Players : 
@@ -209,14 +233,14 @@ function App() {
           </div>
 
           <button
-            onClick={ready}
+            onClick={toggleReady}
           >
             Ready
           </button>
 
         </div>
       )}
-    </div>
+    </GameContext.Provider>
   );
 }
 
